@@ -18,7 +18,6 @@ from mtr.utils.audio_utils import load_audio, STR_CH_FIRST
 warnings.filterwarnings(action='ignore')
 
 
-# check https://github.com/seungheondoh/msd-subsets
 msd_path = '/home/minhee/userdata/music-text-representation-minigb/dataset'
 
 global msd_to_id
@@ -29,13 +28,11 @@ id_to_path = pickle.load(open(os.path.join(msd_path, "lastfm_annotation", "7D_id
 annotation = json.load(open(os.path.join(msd_path, "ecals_annotation/annotation.json"), 'r'))
 
 
-
-
-framework='contrastive' 
-text_type='bert'
-text_rep="stochastic"
-# load model
-model, tokenizer, config = get_model(framework=framework, text_type=text_type, text_rep=text_rep)
+# framework='contrastive' 
+# text_type='bert'
+# text_rep="stochastic"
+# # load model
+# model, tokenizer, config = get_model(framework=framework, text_type=text_type, text_rep=text_rep)
 
 def text_infer(query, model, tokenizer):
     text_input = tokenizer(query, return_tensors="pt")['input_ids']
@@ -117,7 +114,7 @@ if __name__ == "__main__":
     unseen_query = "music for meditation or listen to in the forest"
     query = [tag_query, caption_query, unseen_query]
 
-    framework='contrastive' # triplet
+    framework='classification' # triplet
     text_type='bert' # tag, caption
     text_rep="stochastic"
     

@@ -15,14 +15,7 @@ from mtr.utils.eval_utils import _text_representation
 import warnings
 warnings.filterwarnings(action='ignore')
 
-msd_path = '/home/minhee/userdata/music-text-representation-minigb/dataset'
-
-global msd_to_id
-global id_to_path
-
-msd_to_id = pickle.load(open(os.path.join(msd_path, "lastfm_annotation", "MSD_id_to_7D_id.pkl"), 'rb'))
-id_to_path = pickle.load(open(os.path.join(msd_path, "lastfm_annotation", "7D_id_to_path.pkl"), 'rb'))
-annotation = json.load(open(os.path.join(msd_path, "ecals_annotation/annotation.json"), 'r'))
+msd_path = '/home/minhee/userdata/workspace/music-text-representation-minigb/dataset'
 
 
 def pre_extract_audio_embedding(framework, text_type, text_rep):
@@ -33,7 +26,7 @@ def pre_extract_audio_embedding(framework, text_type, text_rep):
     return audio_embs, msdid
 
 
-def retrieve(framework, text_type, text_rep, annotation, query_list):
+def retrieve(framework, text_type, text_rep, query_list):
     # get audio embedding info
     audio_embs, msdid = pre_extract_audio_embedding(framework, text_type, text_rep)
     # get pretrained model
@@ -52,8 +45,7 @@ def retrieve(framework, text_type, text_rep, annotation, query_list):
 
         metadata = {}
         for idx, _id in enumerate(ret_item.sort_values(ascending=False).head(3).index):
-            meta_obj = annotation[_id]
-            metadata[f'top{idx+1} music'] = meta_obj['tag']
+            metadata[f'top{idx+1} music'] = _id
 
         meta_results.append(metadata)
     return meta_results
@@ -67,4 +59,4 @@ if __name__ == "__main__":
     text_type='bert' # tag, caption
     text_rep="stochastic"
 
-    retrieve(framework, text_type, text_rep, annotation, query)
+    print(retrieve(framework, text_type, text_rep, query))

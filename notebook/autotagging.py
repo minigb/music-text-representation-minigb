@@ -19,8 +19,7 @@ warnings.filterwarnings(action='ignore')
 
 
 # check https://github.com/seungheondoh/msd-subsets
-your_msd_path = ""
-msd_path = os.path.join(your_msd_path, "msd-subsets/dataset")
+msd_path = '/home/minhee/userdata/music-text-representation-minigb/dataset'
 
 global msd_to_id
 global id_to_path
@@ -61,10 +60,10 @@ def audio_infer(audio_path, model, sr=16000, duration=9.91):
     audio_embs = z_audio.mean(0).detach().cpu()
     return audio_embs
 
-query = "fusion jazz with synth, bass, drums, saxophone"
-audio_path = "your_audio"
-text_embs = text_infer(query, model, tokenizer)
-audio_embs = audio_infer(audio_path, model)
+# query = "fusion jazz with synth, bass, drums, saxophone"
+# audio_path = "your_audio"
+# text_embs = text_infer(query, model, tokenizer)
+# audio_embs = audio_infer(audio_path, model)
 
 
 def pre_extract_audio_embedding(audio_path, framework, text_type, text_rep):

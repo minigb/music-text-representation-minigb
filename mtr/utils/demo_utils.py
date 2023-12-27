@@ -83,6 +83,7 @@ def get_model(framework, text_type, text_rep, arch='transformer', frontend='cnn'
     for k in list(state_dict.keys()):
         if k.startswith('module.'):
             state_dict[k[len("module."):]] = state_dict[k]
-        del state_dict[k]              
+            del state_dict[k]
+    del state_dict['text_encoder.embeddings.position_ids']
     model.load_state_dict(state_dict) 
     return model, tokenizer, config

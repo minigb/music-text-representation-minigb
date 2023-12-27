@@ -1,3 +1,4 @@
+# Modified the provided demo.ipynb
 import os
 import json
 import pickle
@@ -14,9 +15,6 @@ from mtr.utils.eval_utils import _text_representation
 import warnings
 warnings.filterwarnings(action='ignore')
 
-# check https://github.com/seungheondoh/msd-subsets
-# your_msd_path = "dataset"
-# msd_path = os.path.join(your_msd_path, "msd-subsets/dataset")
 msd_path = '/home/minhee/userdata/music-text-representation-minigb/dataset'
 
 global msd_to_id
@@ -51,7 +49,7 @@ def retrieve(framework, text_type, text_rep, annotation, query_list):
         text_embs = nn.functional.normalize(text_embs, dim=1)
         logits = text_embs @ audio_embs.T
         ret_item = pd.Series(logits.squeeze(0).numpy(), index=msdid).sort_values(ascending=False)
-        
+
         metadata = {}
         for idx, _id in enumerate(ret_item.sort_values(ascending=False).head(3).index):
             meta_obj = annotation[_id]

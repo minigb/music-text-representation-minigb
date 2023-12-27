@@ -17,12 +17,13 @@ warnings.filterwarnings(action='ignore')
 msd_path = '/home/minhee/userdata/workspace/music-text-representation-minigb/dataset'
 
 
-def load_embeddings(framework, text_type, text_rep):
-    ecals_test = torch.load(f"mtr/{framework}/exp/transformer_cnn_cf_mel/{text_type}_{text_rep}/audio_embs.pt")
-    msdid = [k for k in ecals_test.keys()]
-    audio_embs = [ecals_test[k] for k in msdid]
-    audio_embs = torch.stack(audio_embs)
-    return audio_embs, msdid
+def load_embeddings(embs_path):
+    embs_dict = torch.load(embs_path)
+    ids = [k for k in embs_dict.keys()]
+    embs = [embs_dict[k] for k in id]
+    embs = torch.stack(embs)
+    return embs, ids
+
 
 def pre_extract_audio_embedding(id_list, audio_path_list, model, duration, sr=16000):
     assert duration is not None, "audio duration must be specified"
@@ -49,7 +50,6 @@ def pre_extract_audio_embedding(id_list, audio_path_list, model, duration, sr=16
     return audio_embs_dict
 
 
-
 def pre_extract_text_embedding(id_list, text_list, model, tokenizer) -> dict:
     text_embs_dict = {}
     for id, text in zip(id_list, text_list):
@@ -61,11 +61,11 @@ def pre_extract_text_embedding(id_list, text_list, model, tokenizer) -> dict:
     return text_embs_dict
 
 
-def retrieve(framework, text_type, text_rep, query_list):
+def retrieve(framework, text_type, text_rep, query_list, audio_embs_path, text_embs_path):
     model, tokenizer, _ = get_model(framework=framework, text_type=text_type, text_rep=text_rep)
     
     # get audio embedding info
-    audio_embs, msdid = pre_extract_audio_embedding(framework, text_type, text_rep)
+    audio_embs, id = load_embeddings(audio_embs_path) # need to fix this
     
 
     meta_results = []
@@ -77,7 +77,7 @@ def retrieve(framework, text_type, text_rep, query_list):
         audio_embs = nn.functional.normalize(audio_embs, dim=1)
         text_embs = nn.functional.normalize(text_embs, dim=1)
         logits = text_embs @ audio_embs.T
-        ret_item = pd.Series(logits.squeeze(0).numpy(), index=msdid).sort_values(ascending=False)
+        ret_item = pd.Series(logits.squeeze(0).numpy(), index=id).sort_values(ascending=False)
 
         metadata = {}
         for idx, _id in enumerate(ret_item.sort_values(ascending=False).head(3).index):

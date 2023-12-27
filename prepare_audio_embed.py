@@ -2,7 +2,6 @@
 import torch
 import numpy as np
 
-from mtr.utils.demo_utils import get_model
 from mtr.utils.audio_utils import load_audio, STR_CH_FIRST
 
 def audio_infer(audio_path, model, sr=16000, duration=None):

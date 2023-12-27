@@ -1,0 +1,22 @@
+# metadata
+_dataset_dir: ../tag-to-music/dataset
+
+musiccaps: # MusicCaps
+  _dir: ${_dataset_dir}/musiccaps
+  audio: ${musiccaps._dir}/audio
+  csv_path: ${musiccaps._dir}/musiccaps-public.csv
+
+song_describer:
+  _dir: ${_dataset_dir}/song_describer
+  audio: ${song_describer._dir}/audio
+  csv_path: ${song_describer._dir}/song_describer.csv
+
+# ecals:
+#   _dir: ${_dataset_dir}/ecals_annotation
+#   tags_path: ${ecals._dir}/ecals_tags.json
+
+# mtat:
+#   _dir: ${_dataset_dir}/mtat_split
+#   tags_path: ${mtat._dir}/tags.npy
+
+# autotagging_tags_path: ${mtat.tags_path}

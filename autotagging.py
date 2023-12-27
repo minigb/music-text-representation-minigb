@@ -7,12 +7,16 @@ import numpy as np
 import pandas as pd
 import IPython.display as ipd
 from IPython.display import Audio, HTML
-
 import argparse
+import warnings
+
 from mtr.utils.demo_utils import get_model
 from mtr.utils.eval_utils import _text_representation
-import warnings
+from mtr.utils.demo_utils import get_model
+from mtr.utils.audio_utils import load_audio, STR_CH_FIRST
+
 warnings.filterwarnings(action='ignore')
+
 
 # check https://github.com/seungheondoh/msd-subsets
 your_msd_path = ""
@@ -25,7 +29,45 @@ msd_to_id = pickle.load(open(os.path.join(msd_path, "lastfm_annotation", "MSD_id
 id_to_path = pickle.load(open(os.path.join(msd_path, "lastfm_annotation", "7D_id_to_path.pkl"), 'rb'))
 annotation = json.load(open(os.path.join(msd_path, "ecals_annotation/annotation.json"), 'r'))
 
-def pre_extract_audio_embedding(framework, text_type, text_rep):
+
+
+
+framework='contrastive' 
+text_type='bert'
+text_rep="stochastic"
+# load model
+model, tokenizer, config = get_model(framework=framework, text_type=text_type, text_rep=text_rep)
+
+def text_infer(query, model, tokenizer):
+    text_input = tokenizer(query, return_tensors="pt")['input_ids']
+    with torch.no_grad():
+        text_embs = model.encode_bert_text(text_input, None)
+    return text_embs
+
+
+def audio_infer(audio_path, model, sr=16000, duration=9.91):
+    audio, _ = load_audio(
+            path=audio_path,
+            ch_format= STR_CH_FIRST,
+            sample_rate= sr,
+            downmix_to_mono= True
+    )
+    input_size = int(duration * sr)
+    hop = int(len(audio) // input_size)
+    audio = np.stack([np.array(audio[i * input_size : (i + 1) * input_size]) for i in range(hop)]).astype('float32')
+    audio_tensor = torch.from_numpy(audio)
+    with torch.no_grad():
+        z_audio = model.encode_audio(audio_tensor)
+    audio_embs = z_audio.mean(0).detach().cpu()
+    return audio_embs
+
+query = "fusion jazz with synth, bass, drums, saxophone"
+audio_path = "your_audio"
+text_embs = text_infer(query, model, tokenizer)
+audio_embs = audio_infer(audio_path, model)
+
+
+def pre_extract_audio_embedding(audio_path, framework, text_type, text_rep):
     ecals_test = torch.load(f"../mtr/{framework}/exp/transformer_cnn_cf_mel/{text_type}_{text_rep}/audio_embs.pt")
     msdid = [k for k in ecals_test.keys()]
     audio_embs = [ecals_test[k] for k in msdid]

@@ -34,3 +34,24 @@ def text_infer(text, model, tokenizer):
     text_embs = text_embs.mean(0).detach().cpu()
 
     return text_embs
+
+
+def pre_extract_audio_embedding(id_list, audio_path_list, model, duration, sr=16000) -> dict:
+    assert duration is not None, "audio duration must be specified"
+
+    audio_embs_dict = {}
+    for id, audio_path in zip(id_list, audio_path_list):
+        audio_embs = audio_infer(audio_path, model, duration, sr)
+        audio_embs_dict[id] = audio_embs
+    
+    return audio_embs_dict
+
+
+def pre_extract_text_embedding(text_list, model, tokenizer) -> dict:
+    text_embs_dict = {}
+    for text in text_list:
+        # text can be treated as an identifier by itself
+        text_embs = text_infer(text, model, tokenizer)
+        text_embs_dict[text] = text_embs
+    
+    return text_embs_dict

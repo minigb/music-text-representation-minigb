@@ -11,52 +11,38 @@ from omegaconf import OmegaConf
 from mtr.utils.demo_utils import get_model
 from mtr.utils.eval_utils import _text_representation
 from mtr.utils.audio_utils import load_audio, STR_CH_FIRST
+from utils.embeddings import audio_infer, text_infer
 
 warnings.filterwarnings(action='ignore')
 
 msd_path = '/home/minhee/userdata/workspace/music-text-representation-minigb/dataset'
 
 
-def load_embeddings(embs_path):
-    embs_dict = torch.load(embs_path)
-    ids = [k for k in embs_dict.keys()]
-    embs = [embs_dict[k] for k in id]
-    embs = torch.stack(embs)
-    return embs, ids
+# def load_embeddings(embs_path):
+#     embs_dict = torch.load(embs_path)
+#     ids = [k for k in embs_dict.keys()]
+#     embs = [embs_dict[k] for k in id]
+#     embs = torch.stack(embs)
+#     return embs, ids
 
 
-def pre_extract_audio_embedding(id_list, audio_path_list, model, duration, sr=16000):
+def pre_extract_audio_embedding(id_list, audio_path_list, model, duration, sr=16000) -> dict:
     assert duration is not None, "audio duration must be specified"
 
     audio_embs_dict = {}
     for id, audio_path in zip(id_list, audio_path_list):
-        audio, _ = load_audio(
-            path=audio_path,
-            ch_format= STR_CH_FIRST,
-            sample_rate= sr,
-            downmix_to_mono= True
-        )
-
-        input_size = int(duration * sr)
-        hop = int(len(audio) // input_size)
-        audio = np.stack([np.array(audio[i * input_size : (i + 1) * input_size]) for i in range(hop)]).astype('float32')
-        audio_tensor = torch.from_numpy(audio)
-
-        with torch.no_grad():
-            z_audio = model.encode_audio(audio_tensor)
-        audio_embs = z_audio.mean(0).detach().cpu()
+        audio_embs = audio_infer(audio_path, model, duration, sr)
         audio_embs_dict[id] = audio_embs
     
     return audio_embs_dict
 
 
-def pre_extract_text_embedding(id_list, text_list, model, tokenizer) -> dict:
+def pre_extract_text_embedding(text_list, model, tokenizer) -> dict:
     text_embs_dict = {}
-    for id, text in zip(id_list, text_list):
-        text_input = tokenizer(text, return_tensors="pt")['input_ids']
-        with torch.no_grad():
-            text_embs = model.encode_bert_text(text_input, None)
-        text_embs_dict[id] = text_embs
+    for text in text_list:
+        # text can be treated as an identifier by itself
+        text_embs = text_infer(text, model, tokenizer)
+        text_embs_dict[text] = text_embs
     
     return text_embs_dict
 
@@ -66,7 +52,7 @@ def retrieve(framework, text_type, text_rep, query_list, audio_embs_path, text_e
     
     # get audio embedding info
     audio_embs, id = load_embeddings(audio_embs_path) # need to fix this
-    
+
 
     meta_results = []
     for query in query_list:

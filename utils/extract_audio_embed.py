@@ -23,5 +23,5 @@ def audio_infer(audio_path, model, sr=16000, duration=None):
     with torch.no_grad():
         z_audio = model.encode_audio(audio_tensor)
     audio_embs = z_audio.mean(0).detach().cpu()
-    
+
     return audio_embs

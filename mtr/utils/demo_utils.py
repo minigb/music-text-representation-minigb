@@ -14,7 +14,7 @@ from mtr.triplet.model import TripletModel
 from mtr.contrastive.model import ContrastiveModel
 
 def get_model(framework, text_type, text_rep, arch='transformer', frontend='cnn', mix_type="cf", audio_rep="mel"):
-    save_dir = f"../mtr/{framework}/exp/{arch}_{frontend}_{mix_type}_{audio_rep}/{text_type}_{text_rep}"
+    save_dir = f"mtr/{framework}/exp/{arch}_{frontend}_{mix_type}_{audio_rep}/{text_type}_{text_rep}"
     config = OmegaConf.load(os.path.join(save_dir, "hparams.yaml"))
     audio_preprocessr = TFRep(
                 sample_rate= config.sr,

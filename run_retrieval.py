@@ -26,7 +26,7 @@ annotation = json.load(open(os.path.join(msd_path, "ecals_annotation/annotation.
 
 
 def pre_extract_audio_embedding(framework, text_type, text_rep):
-    ecals_test = torch.load(f"../mtr/{framework}/exp/transformer_cnn_cf_mel/{text_type}_{text_rep}/audio_embs.pt")
+    ecals_test = torch.load(f"mtr/{framework}/exp/transformer_cnn_cf_mel/{text_type}_{text_rep}/audio_embs.pt")
     msdid = [k for k in ecals_test.keys()]
     audio_embs = [ecals_test[k] for k in msdid]
     audio_embs = torch.stack(audio_embs)

@@ -49,11 +49,8 @@ def retrieval_fn(query, tokenizer, model, audio_embs, msdid, annotation):
     instance = {}
     metadata = {}
     for idx, _id in enumerate(ret_item.sort_values(ascending=False).head(3).index):
-        # music_obj = ipd.Audio(os.path.join(msd_path, 'songs', id_to_path[msd_to_id[_id]]) , rate=22050)
         meta_obj = annotation[_id]
         metadata[f'top{idx+1} music'] = meta_obj['tag']
-        # music_src = music_obj.src_attr()
-        # instance[f'top{idx+1} music'] = f"""<audio controls><source src="{music_src}" type="audio/wav"></audio></td>"""
     return metadata
 
 def retrieval_show(framework, text_type, text_rep, annotation, query, is_audio=False):    
@@ -73,8 +70,6 @@ def retrieval_show(framework, text_type, text_rep, annotation, query, is_audio=F
 
 if __name__ == "__main__":
     tag_query = "banjo"
-    # caption_query = "fusion jazz with synth, bass, drums, saxophone"
-    # unseen_query = "music for meditation or listen to in the forest"
     query = [tag_query]
 
     framework='contrastive' # triplet

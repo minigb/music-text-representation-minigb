@@ -1,4 +1,4 @@
-# metadata
+# dataset
 _dataset_dir: ../tag-to-music/dataset
 
 musiccaps: # MusicCaps
@@ -10,6 +10,10 @@ song_describer:
   _dir: ${_dataset_dir}/song_describer
   audio: ${song_describer._dir}/audio
   csv_path: ${song_describer._dir}/song_describer.csv
+
+framework: contrastive
+text_type: bert
+text_rep: tag
 
 # ecals:
 #   _dir: ${_dataset_dir}/ecals_annotation

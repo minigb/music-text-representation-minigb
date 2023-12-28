@@ -36,11 +36,11 @@ def text_infer(text, model, tokenizer):
     return text_embs
 
 
-def pre_extract_audio_embedding(id_list, audio_path_list, model, duration, sr=16000) -> dict:
-    assert duration is not None, "audio duration must be specified"
+def pre_extract_audio_embedding(id_list, audio_path_list, model, duration_list, sr=16000) -> dict:
+    assert duration_list is not None, "audio duration must be specified"
 
     audio_embs_dict = {}
-    for id, audio_path in zip(id_list, audio_path_list):
+    for id, audio_path, duration in zip(id_list, audio_path_list, duration_list):
         audio_embs = audio_infer(audio_path, model, duration, sr)
         audio_embs_dict[id] = audio_embs
     

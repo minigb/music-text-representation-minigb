@@ -113,13 +113,8 @@ if __name__ == "__main__":
         text_embs_dict = torch.load(text_embs_path)
 
     # query, get similarity
-    sim_dir = Path(f'sim/{dataset_name}')
-    if sim_dir.exists():
-        raise NotImplementedError
-        # ret_item_list = pd.read_csv(result_save_path)
-        # ret_item_list = [ret_item_list.iloc[i].dropna() for i in range(len(ret_item_list))]
-        # ret_item_list = [pd.Series(ret_item_list[i].values, index=ret_item_list[i].index) for i in range(len(ret_item_list))]
-    else:
+    sim_dir = Path(f'sim/{args.tag_type}/{dataset_name}')
+    if not sim_dir.exists():
         os.makedirs(sim_dir, exist_ok=True)
         ret_item_list = []
         for i, cur_tag in tqdm(enumerate(tag_list)): # cur_tag is a list of string tags
@@ -141,29 +136,46 @@ if __name__ == "__main__":
             
             torch.save(sim_result, result_save_path)
 
-    # load
-    # for i in range(len(dataset)):
-    #     identifier = dataset.get_identifier(i)
-    #     result_save_path = sim_dir / f'{identifier}.pt'
-    #     sim_result = torch.load(result_save_path)
-    #     print(sim_result)
+    # recall at k
+    portion_list = [-1, 0, 0.3, 0.5, 0.7] # -1: just average, 0: caption only
+    result_dir = Path(f'result/{args.tag_type}')
+    if not result_dir.exists():
+        os.makedirs(result_dir, exist_ok=True)
+    for portion in portion_list:
+        recall_result_path = result_dir/f'{dataset_name}_{portion}.json'
+        if not recall_result_path.exists():
+            rank_dict = {}
+            for i in tqdm(range(len(dataset))):
+                identifier = dataset.get_identifier(i)
+                sim_result_path = sim_dir / f'{identifier}.pt'
+                sim_result = torch.load(sim_result_path)
+
+                # stack all
+                sim_result = torch.stack(list(sim_result.values()), axis=0)
+                    
+                # average
+                if portion == -1:
+                    sim_avg = sim_result.mean(axis=0)
+                else:
+                    sim_avg = portion * sim_result[:-1].mean(axis=0) + (1 - portion) * sim_result[-1]
+                ret_item = pd.Series(sim_avg.squeeze(0).numpy(), index=audio_embs_dict.keys()).sort_values(ascending=False)
+                rank = ret_item.index.get_loc(identifier)
+                rank_dict[identifier] = rank
             
-    #         sim_result_all = torch.stack(sim_result_list, axis=0)
+            with open(recall_result_path, 'w') as f:
+                json.dump(rank_dict, f, indent = 4)
 
-    #         # average all
-    #         sim_avg = sim_result_all.mean(axis=0)
-    #         ret_item = pd.Series(sim_avg.squeeze(0).numpy(), index=audio_embs_dict.keys()).sort_values(ascending=False)
-    #         ret_item_list.append(ret_item)
+        assert recall_result_path.exists()
+        with open(recall_result_path, 'r') as f:
+            rank_dict = json.load(f)
 
-    #     # save
-    #     ret_item_list = pd.DataFrame(ret_item_list)
-    #     ret_item_list.to_csv(result_save_path)
+        for k in [10]:
+            recall = 0
+            for identifier in rank_dict.keys():    
+                if rank_dict[identifier] < k:
+                    recall += 1
 
-    # # recall at 10
-    # for k in [10]:
-    #     recall = 0
-    #     for i in range(len(dataset)):
-    #         if dataset.get_identifier(i) in ret_item_list[i].head(k).index:
-    #             recall += 1
-    #         print(f'recall@{k}: {recall / len(tag_list)}')
-    #         break
+        assert len(dataset) == len(rank_dict)
+        print(f'portion: {portion}')
+        print(f'recall@{k}: {recall/len(dataset)}')
+        print('-' * 50)

@@ -78,12 +78,15 @@ if __name__ == "__main__":
     elif dataset_name == 'song_describer':
         dataset = SongDescriber(dataset_config.song_describer.csv_path)
         audio_dir = Path(dataset_config.song_describer.audio)
-        duration_list = [dataset[i]['duration'] for i in range(len(dataset))]
+        # duration_list = [dataset[i]['duration'] for i in range(len(dataset))]
+        duration_list = [119.91 for _ in dataset.df.index]
     else:
         raise NotImplementedError
     
     # audio embed
     audio_embs_path = Path(f'{dataset_name}_audio_embs.pt')
+    identifier_list = [dataset.get_identifier(i) for i in range(len(dataset))]
+    assert len(identifier_list) == len(set(identifier_list)), f'{len(identifier_list)} != {len(set(identifier_list))}'
     if not audio_embs_path.exists():
         audio_embs_dict = pre_extract_audio_embedding(
             [dataset.get_identifier(i) for i in range(len(dataset))],
@@ -93,6 +96,7 @@ if __name__ == "__main__":
         torch.save(audio_embs_dict, audio_embs_path)
     else:
         audio_embs_dict = torch.load(audio_embs_path)
+        assert len(dataset) == len(audio_embs_dict), f'{len(dataset)} != {len(audio_embs_dict)}'
     
     # tag
     tag_path = Path(dataset_config.tags_dir) / f'{args.tag_type}/{dataset_name}_tags.json'
@@ -160,7 +164,7 @@ if __name__ == "__main__":
                     sim_avg = portion * sim_result[:-1].mean(axis=0) + (1 - portion) * sim_result[-1]
                 ret_item = pd.Series(sim_avg.squeeze(0).numpy(), index=audio_embs_dict.keys()).sort_values(ascending=False)
                 rank = ret_item.index.get_loc(identifier)
-                rank_dict[identifier] = rank
+                rank_dict[str(identifier)] = rank
             
             with open(recall_result_path, 'w') as f:
                 json.dump(rank_dict, f, indent = 4)
@@ -175,7 +179,7 @@ if __name__ == "__main__":
                 if rank_dict[identifier] < k:
                     recall += 1
 
-        assert len(dataset) == len(rank_dict)
+        assert len(dataset) == len(rank_dict), f'{len(dataset)} != {len(rank_dict)}'
         print(f'portion: {portion}')
         print(f'recall@{k}: {recall/len(dataset)}')
         print('-' * 50)

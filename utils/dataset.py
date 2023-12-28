@@ -75,7 +75,19 @@ class MusicCaps(Dataset):
 class SongDescriber(Dataset):
     def __init__(self, data_path):
         super().__init__(data_path)
+        self._set_audio_path()
 
 
     def get_identifier(self, index):
-        return self[index]['track_id'] # number
+        # return self[index]['track_id'] # number
+        return self[index]['caption_id'] # number
+
+
+    def _set_audio_path(self):
+        # TODO(minigb): Refine this later
+        for i in range(len(self)):
+            data = self[i]
+            parent = Path(data['path']).parent
+            file_name = Path(data['path']).stem
+            audio_type = 'mp3'
+            self.df.loc[i, 'path'] = f'{parent}/{file_name}.2min.{audio_type}'

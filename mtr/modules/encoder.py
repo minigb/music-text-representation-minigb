@@ -85,6 +85,9 @@ class MusicTransformer(nn.Module):
         h_audio = self.frontend(spec) # B x L x D
         if self.is_vq:
             h_audio = self.vq_modules(h_audio)
+        # TODO(minigb): fix this
+        if h_audio.size(1) > 512:
+            h_audio = h_audio[:, :512, :]
         cls_token = self.cls_token.repeat(h_audio.shape[0], 1, 1)
         h_audio = torch.cat((cls_token, h_audio), dim=1)
         h_audio += self.pos_embedding[:, : h_audio.size(1)]

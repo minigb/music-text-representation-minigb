@@ -11,6 +11,8 @@ import argparse
 from pathlib import Path
 from omegaconf import OmegaConf
 import json
+from tqdm import tqdm
+import os
 
 from mtr.utils.demo_utils import get_model
 from utils.embeddings import audio_infer, text_infer, pre_extract_audio_embedding, pre_extract_text_embedding
@@ -110,22 +112,58 @@ if __name__ == "__main__":
     else:
         text_embs_dict = torch.load(text_embs_path)
 
-    # query
-    ret_item_list = []
-    for i, cur_tag in enumerate(tag_list): # cur_tag is a list of string tags
-        query_list = cur_tag + [dataset[i]['caption']]
-        sim_result_list = []
-        for query in query_list:
-            if query in text_embs_dict.keys():
-                text_emb = text_embs_dict[query]
-            else:
-                text_emb = text_infer(query, model, tokenizer)
+    # query, get similarity
+    sim_dir = Path(f'sim/{dataset_name}')
+    if sim_dir.exists():
+        raise NotImplementedError
+        # ret_item_list = pd.read_csv(result_save_path)
+        # ret_item_list = [ret_item_list.iloc[i].dropna() for i in range(len(ret_item_list))]
+        # ret_item_list = [pd.Series(ret_item_list[i].values, index=ret_item_list[i].index) for i in range(len(ret_item_list))]
+    else:
+        os.makedirs(sim_dir, exist_ok=True)
+        ret_item_list = []
+        for i, cur_tag in tqdm(enumerate(tag_list)): # cur_tag is a list of string tags
+            query_list = cur_tag + [dataset[i]['caption']]
+            sim_result = {}
 
-            sim = get_sim(audio_embs_dict, text_emb)
-            sim_result_list.append(sim)
-        sim_result = torch.stack(sim_result_list, axis=0)
+            identifier = dataset.get_identifier(i)
+            result_save_path = sim_dir / f'{identifier}.pt'
+            
+            for query in query_list:
+                if query in text_embs_dict.keys():
+                    text_emb = text_embs_dict[query]
+                else:
+                    text_emb = text_infer(query, model, tokenizer)
 
-        # average all
-        sim_avg = sim_result.mean(axis=0)
-        ret_item = pd.Series(sim_avg.squeeze(0).numpy(), index=audio_embs_dict.keys()).sort_values(ascending=False)
-        ret_item_list.append(ret_item)
+                sim = get_sim(audio_embs_dict, text_emb)
+        
+                sim_result[query] = sim
+            
+            torch.save(sim_result, result_save_path)
+
+    # load
+    # for i in range(len(dataset)):
+    #     identifier = dataset.get_identifier(i)
+    #     result_save_path = sim_dir / f'{identifier}.pt'
+    #     sim_result = torch.load(result_save_path)
+    #     print(sim_result)
+            
+    #         sim_result_all = torch.stack(sim_result_list, axis=0)
+
+    #         # average all
+    #         sim_avg = sim_result_all.mean(axis=0)
+    #         ret_item = pd.Series(sim_avg.squeeze(0).numpy(), index=audio_embs_dict.keys()).sort_values(ascending=False)
+    #         ret_item_list.append(ret_item)
+
+    #     # save
+    #     ret_item_list = pd.DataFrame(ret_item_list)
+    #     ret_item_list.to_csv(result_save_path)
+
+    # # recall at 10
+    # for k in [10]:
+    #     recall = 0
+    #     for i in range(len(dataset)):
+    #         if dataset.get_identifier(i) in ret_item_list[i].head(k).index:
+    #             recall += 1
+    #         print(f'recall@{k}: {recall / len(tag_list)}')
+    #         break

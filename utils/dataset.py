@@ -16,7 +16,7 @@ class Dataset(ABC, metaclass = NonOverridableMeta):
         self.df = pd.read_csv(self.data_path)
         # Here we assume that the dataset has 'caption' column.
         # Change this part later if needed.
-        assert 'caption' in self.df.columns, "There is no 'caption' column in the dataset."
+        assert 'caption' in self.df.columns
     
 
     def __getitem__(self, index):
@@ -39,13 +39,12 @@ class MusicCaps(Dataset):
         self.text_only = text_only
         if not self.text_only:
             self._drop_unavailables()
-        self._index_list = list(self.df.index)
 
 
-    def __getitem__(self, index):
-        assert index < len(self)
-        new_index = self._index_list[index]
-        return self.df.iloc[new_index]
+    # def __getitem__(self, index):
+    #     assert index < len(self)
+    #     new_index = self._index_list[index]
+    #     return self.df.iloc[new_index]
 
 
     def get_identifier(self, index):
@@ -61,11 +60,16 @@ class MusicCaps(Dataset):
 
     def _drop_unavailables(self):
         audio_dir = self.data_path.parent / 'audio'
+        index_list = []
         for i in range(len(self)):
             file_name = self[i]['path']
             audio_file = audio_dir / file_name
             if not audio_file.exists():
-                self.df.drop(i, inplace = True)
+                index_list.append(i)
+
+        for i in index_list:
+            self.df.drop(i, inplace = True)
+
 
 
 class SongDescriber(Dataset):

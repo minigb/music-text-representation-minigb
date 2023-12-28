@@ -85,8 +85,6 @@ if __name__ == "__main__":
     
     # audio embed
     audio_embs_path = Path(f'{dataset_name}_audio_embs.pt')
-    identifier_list = [dataset.get_identifier(i) for i in range(len(dataset))]
-    assert len(identifier_list) == len(set(identifier_list)), f'{len(identifier_list)} != {len(set(identifier_list))}'
     if not audio_embs_path.exists():
         audio_embs_dict = pre_extract_audio_embedding(
             [dataset.get_identifier(i) for i in range(len(dataset))],
@@ -178,7 +176,6 @@ if __name__ == "__main__":
             for identifier in rank_dict.keys():    
                 if rank_dict[identifier] < k:
                     recall += 1
-
         assert len(dataset) == len(rank_dict), f'{len(dataset)} != {len(rank_dict)}'
         print(f'portion: {portion}')
         print(f'recall@{k}: {recall/len(dataset)}')

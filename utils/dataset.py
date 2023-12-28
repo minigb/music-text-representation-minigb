@@ -78,9 +78,10 @@ class SongDescriber(Dataset):
         self._set_audio_path()
 
 
-    def get_identifier(self, index):
+    def get_identifier(self, index): # TODO(minigb): Make a test to check identifier uniqueness
         # return self[index]['track_id'] # number
         return self[index]['caption_id'] # number
+    
 
 
     def _set_audio_path(self):

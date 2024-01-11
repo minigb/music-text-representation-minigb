@@ -6,9 +6,7 @@ from tqdm import tqdm
 from mtr.utils.audio_utils import load_audio, STR_CH_FIRST
 
 
-def audio_infer(audio_path, model, duration, sr=16000):
-    assert duration is not None, "audio duration must be specified"
-
+def audio_infer(audio_path, model, duration=9.91, sr=16000):
     audio, _ = load_audio(
             path=audio_path,
             ch_format= STR_CH_FIRST,

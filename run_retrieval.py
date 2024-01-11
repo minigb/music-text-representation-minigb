@@ -27,8 +27,6 @@ def get_sim(audio_embs_dict, text_emb) -> torch.Tensor:
 
 
 def get_audio_embed_dict(audio_embs_path, dataset) -> dict:
-    # audio embed
-    # audio_embs_path = Path(f'{config_key}_{dataset_name}_audio_embs.pt')
     if not audio_embs_path.exists():
         audio_embs_dict = pre_extract_audio_embedding(
             [dataset.get_identifier(i) for i in range(len(dataset))],
@@ -98,7 +96,7 @@ def calculate_and_save_sim(sim_dir, dataset, audio_embs_dict, text_embs_dict) ->
     return
 
 
-def calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, config_key, dataset_name, portion_list, k_list):
+def calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, portion_list):
     if not result_dir.exists():
         os.makedirs(result_dir, exist_ok=True)
 
@@ -108,7 +106,7 @@ def calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, confi
             # this will be set randomly in calculate_recall_at_k
             continue
         else:
-            recall_result_path = result_dir/f'{config_key}_{dataset_name}_{portion}.json'
+            recall_result_path = Path(result_dir/f'{portion}.json')
             if not recall_result_path.exists():
                 for i in tqdm(range(len(dataset))):
                     identifier = dataset.get_identifier(i)
@@ -144,7 +142,7 @@ def calculate_recall_at_k(result_dir, dataset, k_list, portion_list):
                 identifier = dataset.get_identifier(i)
                 rank_dict[str(identifier)] = np.random.randint(0, len(dataset) - 1)
         else:
-            recall_result_path = result_dir/f'{config_key}_{dataset_name}_{portion}.json'
+            recall_result_path = Path(result_dir/f'{portion}.json')
             assert recall_result_path.exists()
             with open(recall_result_path, 'r') as f:
                 rank_dict = json.load(f)
@@ -174,10 +172,11 @@ if __name__ == "__main__":
     config_path = Path(args.config_path)
     config = OmegaConf.load(config_path)
     model, tokenizer, _ = get_model(config.framework, config.text_type, config.text_rep)
-    config_key = f'{config.framework}_{config.text_type}_{config.text_rep}'
+    dir_by_config = Path(f'{config.framework}/{config.text_type}/{config.text_rep}')
 
     # dataset config
     dataset_config_path = Path(args.dataset_config_path)
+    tag_type = args.tag_type
     dataset_config = OmegaConf.load(dataset_config_path)
     
     # dataset
@@ -192,11 +191,11 @@ if __name__ == "__main__":
         raise NotImplementedError
     
     # path
-    audio_embs_path = Path(f'{config_key}_{dataset_name}_audio_embs.pt')
-    tag_path = Path(dataset_config.tags_dir) / f'{args.tag_type}/{dataset_name}_tags.json'
-    text_embs_path = Path(f'{config_key}_{dataset_name}_text_embs.pt')
-    sim_dir = Path(f'sim/{args.tag_type}/{config_key}_{dataset_name}')
-    result_dir = Path(f'result/{args.tag_type}')
+    tag_path = Path(dataset_config.tags_dir)/tag_type/dataset_name/f'tags.json'
+    audio_embs_path = Path(dir_by_config/'preprocessing'/dataset_name/'audio_embs.pt')
+    text_embs_path = Path(dir_by_config/'preprocessing'/dataset_name/f'text_embs_{tag_type}.pt')
+    sim_dir = Path(dir_by_config/'sim_result'/dataset_name/tag_type)
+    result_dir = Path('result'/dir_by_config/dataset_name/tag_type)
 
     # do retrieval
     audio_embs_dict = get_audio_embed_dict(audio_embs_path, dataset)
@@ -206,7 +205,7 @@ if __name__ == "__main__":
 
     # recall at k
     portion_list = [-1, 0, 0.3, 0.5, 0.7, 'random'] # -1: just average, 0: caption only
-    calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, config_key, dataset_name, portion_list, k_list=[10])
+    calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, dir_by_config, dataset_name, portion_list, k_list=[10])
 
     k_list = [10]
     calculate_recall_at_k(result_dir, dataset, k_list, portion_list)

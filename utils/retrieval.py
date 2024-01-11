@@ -36,6 +36,7 @@ def get_audio_embed_dict(audio_embs_path, audio_dir, model, dataset) -> dict:
     return audio_embs_dict
 
 
+# TODO(minigb): Change to only save the tags, and get the caption embeddings on the fly
 def get_text_all(tag_path, dataset) -> list:
     assert tag_path.exists(), f'{tag_path} does not exist'
 

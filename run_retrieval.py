@@ -160,11 +160,13 @@ def recall_at_k_calculate_and_save(rank_dir, dataset, k_list, portion_list, save
             os.makedirs(save_dir, exist_ok=True)
             recall_at_k_result[k] = {'retrieved' : count_retrieved,
                                      'total' : len(dataset),
-                                     'recall' : count_retrieved / len(dataset),
-                                     'mean_rank' : np.mean(list(rank_dict.values())) + 1}
+                                     'recall' : count_retrieved / len(dataset)}
+            recall_at_k_result['mean_rank'] = np.mean(list(rank_dict.values())) + 1
     
             with open(save_path, 'w') as f:
                 json.dump(recall_at_k_result, f, indent = 4)
+    
+    print('result saved at', save_dir)
 
 
 def get_dataset(dataset_config, dataset_name) -> tuple:
@@ -180,12 +182,12 @@ def get_dataset(dataset_config, dataset_name) -> tuple:
     return dataset, audio_dir
 
 
-def get_dirs(dataset_config, dataset_name, tag_type, dir_by_model_info, init_previous) -> tuple:
+def get_dirs(dataset_config, dataset_name, tag_type, dir_by_model_info, init_previous, run_name = '') -> tuple:
     dirs_to_save_process = {
-        'embeds': Path(dir_by_model_info/'preprocessing'/dataset_name),
-        'sim': Path(dir_by_model_info/'sim_result'/dataset_name/tag_type),
-        'rank': Path('rank'/dir_by_model_info/dataset_name/tag_type),
-        'result': Path('result'/dir_by_model_info/dataset_name/tag_type),
+        'embeds': Path(dir_by_model_info/'preprocessing'/f'{dataset_name}{run_name}'),
+        'sim': Path(dir_by_model_info/'sim_result'/dataset_name/f'{tag_type}{run_name}'),
+        'rank': Path('rank'/dir_by_model_info/dataset_name/f'{tag_type}{run_name}'),
+        'result': Path('result'/dir_by_model_info/dataset_name/f'{tag_type}{run_name}'),
     }
     if init_previous:
         for dir_path in dirs_to_save_process.values():
@@ -209,6 +211,7 @@ if __name__ == "__main__":
     parser.add_argument("--tag_type", type = str, default = 'matching')
 
     parser.add_argument("--init", type = bool, default = False)
+    parser.add_argument("--run_name", type = str, default = '')
     
     args = parser.parse_args()
 

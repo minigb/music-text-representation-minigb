@@ -28,6 +28,7 @@ def get_sim(audio_embs_dict, text_emb) -> torch.Tensor:
 
 def get_audio_embed_dict(audio_embs_path, dataset) -> dict:
     if not audio_embs_path.exists():
+        os.makedirs(audio_embs_path.parent, exist_ok=True)
         audio_embs_dict = pre_extract_audio_embedding(
             [dataset.get_identifier(i) for i in range(len(dataset))],
             [audio_dir / dataset[i]['path'] for i in range(len(dataset))],
@@ -54,6 +55,7 @@ def get_tag_list(tag_path, dataset) -> list:
 
 def get_text_embed_dict(text_embs_path, dataset) -> dict:
     if not text_embs_path.exists():
+        os.makedirs(text_embs_path.parent, exist_ok=True)
         text_embs_dict = pre_extract_text_embedding(
             set([tag for tags in dataset.df['tag'] for tag in tags ]),
             model,
@@ -97,9 +99,6 @@ def calculate_and_save_sim(sim_dir, dataset, audio_embs_dict, text_embs_dict) ->
 
 
 def calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, portion_list):
-    if not result_dir.exists():
-        os.makedirs(result_dir, exist_ok=True)
-
     for portion in portion_list:
         rank_dict = {}
         if portion == 'random':
@@ -108,6 +107,7 @@ def calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, porti
         else:
             recall_result_path = Path(result_dir/f'{portion}.json')
             if not recall_result_path.exists():
+                os.makedirs(recall_result_path.parent, exist_ok=True)
                 for i in tqdm(range(len(dataset))):
                     identifier = dataset.get_identifier(i)
                     sim_result_path = sim_dir / f'{identifier}.pt'

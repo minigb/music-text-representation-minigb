@@ -45,6 +45,9 @@ def text_infer(text, model, tokenizer):
 
 def pre_extract_audio_embedding(id_list, audio_path_list, model, duration=9.91, sr=16000) -> dict:
     audio_embs_dict = {}
+    assert len(id_list) == len(audio_path_list), f'{len(id_list)} != {len(audio_path_list)}'
+
+    print(f'Extracting audio embeddings for {len(id_list)} audio files')
     for id, audio_path in tqdm(zip(id_list, audio_path_list)):
         audio_embs = audio_infer(audio_path, model, duration, sr)
         audio_embs_dict[id] = audio_embs

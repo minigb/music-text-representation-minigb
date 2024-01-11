@@ -32,11 +32,12 @@ def audio_infer(audio_path, model, duration=9.91, sr=16000):
 
 def text_infer(text, model, tokenizer):
     text_input = tokenizer(text, return_tensors="pt")['input_ids']
+    attention_mask = tokenizer(text, return_tensors="pt")['attention_mask']
     with torch.no_grad():
         if torch.cuda.is_available():
             text_input = text_input.to('cuda')
             model = model.to('cuda')
-        text_embs = model.encode_bert_text(text_input, None)
+        text_embs = model.encode_bert_text(text_input, attention_mask)
     text_embs = text_embs.mean(0).detach().cpu()
 
     return text_embs

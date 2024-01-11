@@ -3,7 +3,6 @@ import torch
 from torch import nn
 import numpy as np
 import pandas as pd
-import warnings
 import argparse
 from pathlib import Path
 from omegaconf import OmegaConf
@@ -167,27 +166,7 @@ def recall_at_k_calculate_and_save(rank_dir, dataset, k_list, portion_list, save
                 json.dump(recall_at_k_result, f, indent = 4)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config_path", type = str, required = True)
-    parser.add_argument("--dataset_config_path", type = str, required = True)
-    parser.add_argument("--dataset_name", type = str, required = True)
-    parser.add_argument("--tag_type", type = str, default = 'matching')
-    args = parser.parse_args()
-
-    # config
-    config_path = Path(args.config_path)
-    config = OmegaConf.load(config_path)
-    model, tokenizer, _ = get_model(config.framework, config.text_type, config.text_rep)
-    dir_by_config = Path(f'{config.framework}/{config.text_type}/{config.text_rep}')
-
-    # dataset config
-    dataset_config_path = Path(args.dataset_config_path)
-    tag_type = args.tag_type
-    dataset_config = OmegaConf.load(dataset_config_path)
-    
-    # dataset
-    dataset_name = args.dataset_name
+def get_dataset(dataset_config, dataset_name) -> tuple:
     if dataset_name == 'musiccaps':
         dataset = MusicCaps(dataset_config.musiccaps.csv_path)
         audio_dir = Path(dataset_config.musiccaps.audio)
@@ -197,24 +176,74 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError
     
-    # path
-    # TODO(minigb): Make a function to set the paths
+    return dataset, audio_dir
+
+
+def get_dirs(dataset_config, dataset_name, tag_type, dir_by_model_info, init_previous) -> tuple:
+    dirs_to_save_process = {
+        'embeds': Path(dir_by_model_info/'preprocessing'/dataset_name),
+        'sim': Path(dir_by_model_info/'sim_result'/dataset_name/tag_type),
+        'rank': Path('rank'/dir_by_model_info/dataset_name/tag_type),
+        'result': Path('result'/dir_by_model_info/dataset_name/tag_type),
+    }
+    if init_previous:
+        for dir_path in dirs_to_save_process.values():
+            if dir_path.exists():
+                os.rmdir(dir_path)
+
     tag_path = Path(dataset_config.tags_dir)/tag_type/f'{dataset_name}_tags.json'
-    audio_embs_path = Path(dir_by_config/'preprocessing'/dataset_name/'audio_embs.pt')
-    text_embs_path = Path(dir_by_config/'preprocessing'/dataset_name/f'text_embs_{tag_type}.pt')
-    sim_dir = Path(dir_by_config/'sim_result'/dataset_name/tag_type)
-    rank_dir = Path('rank'/dir_by_config/dataset_name/tag_type)
-    result_dir = Path('result'/dir_by_config/dataset_name/tag_type)
 
-    # do retrieval
-    audio_embs_dict = get_audio_embed_dict(audio_embs_path, dataset)
+    return dirs_to_save_process, tag_path
+
+    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    # parser.add_argument("--config_path", type = str, required = True)
+    parser.add_argument("--framework", type = str, default = 'contrastive')
+    parser.add_argument("--text_type", type = str, default = 'bert')
+    parser.add_argument("--text_rep", type = str, required = True)
+
+    # parser.add_argument("--dataset_dir", type = str, default = '../tag_to_music/dataset')
+    parser.add_argument("--dataset_config_path", type = str, required = True)
+    parser.add_argument("--dataset_name", type = str, required = True)
+    parser.add_argument("--tag_type", type = str, default = 'matching')
+
+    parser.add_argument("--init", type = bool, default = False)
+    
+    args = parser.parse_args()
+
+    framework = args.framework
+    text_type = args.text_type
+    text_rep = args.text_rep
+    dataset_config_path = Path(args.dataset_config_path)
+    tag_type = args.tag_type
+    dataset_name = args.dataset_name
+
+    # model
+    model, tokenizer, _ = get_model(framework, text_type, text_rep)
+    dir_by_model_info = Path(f'{framework}/{text_type}/{text_rep}')
+
+    # dataset
+    dataset_config = OmegaConf.load(dataset_config_path)
+    dataset, audio_dir = get_dataset(dataset_config, dataset_name)
+    
+    # init
+    init_previous = args.init
+    
+    # path
+    dirs, tag_path = get_dirs(dataset_config, dataset_name, tag_type, dir_by_model_info, init_previous)
+
+    # calculate sim
+    audio_embs_dict = get_audio_embed_dict(dirs['embeds'] / 'audio_embs.pt', dataset)
     dataset.df['tag'] = get_tag_list(tag_path, dataset)
-    text_embs_dict = get_text_embed_dict(text_embs_path, dataset)
-    sim_calculate_and_save(sim_dir, dataset, audio_embs_dict, text_embs_dict)
+    text_embs_dict = get_text_embed_dict(dirs['embeds'] / f'text_embs_{tag_type}.pt', dataset)
+    sim_calculate_and_save(dirs['sim'], dataset, audio_embs_dict, text_embs_dict)
 
-    # recall at k
+    # calculate rank
+    # TODO(minigb): Take portion_list and k_list out to config or args
     portion_list = [-1, 0, 0.3, 0.5, 0.7, 'random'] # -1: just average, 0: caption only
-    rank_calculate_and_save(rank_dir, dataset, audio_embs_dict, sim_dir, portion_list)
+    rank_calculate_and_save(dirs['rank'], dataset, audio_embs_dict, dirs['sim'], portion_list)
 
+    # calculate recall@k
     k_list = [1, 5, 10]
-    recall_at_k_calculate_and_save(rank_dir, dataset, k_list, portion_list, result_dir)
+    recall_at_k_calculate_and_save(dirs['rank'], dataset, k_list, portion_list, dirs['result'])

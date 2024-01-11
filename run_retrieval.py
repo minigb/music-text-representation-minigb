@@ -9,6 +9,7 @@ from omegaconf import OmegaConf
 import json
 from tqdm import tqdm
 import os
+import shutil
 
 from mtr.utils.demo_utils import get_model
 from utils.embeddings import audio_infer, text_infer, pre_extract_audio_embedding, pre_extract_text_embedding
@@ -189,7 +190,7 @@ def get_dirs(dataset_config, dataset_name, tag_type, dir_by_model_info, init_pre
     if init_previous:
         for dir_path in dirs_to_save_process.values():
             if dir_path.exists():
-                os.rmdir(dir_path)
+                shutil.rmtree(dir_path)
 
     tag_path = Path(dataset_config.tags_dir)/tag_type/f'{dataset_name}_tags.json'
 
@@ -203,7 +204,6 @@ if __name__ == "__main__":
     parser.add_argument("--text_type", type = str, default = 'bert')
     parser.add_argument("--text_rep", type = str, required = True)
 
-    # parser.add_argument("--dataset_dir", type = str, default = '../tag_to_music/dataset')
     parser.add_argument("--dataset_config_path", type = str, required = True)
     parser.add_argument("--dataset_name", type = str, required = True)
     parser.add_argument("--tag_type", type = str, default = 'matching')

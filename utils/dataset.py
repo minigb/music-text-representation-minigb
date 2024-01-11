@@ -20,7 +20,7 @@ class Dataset(ABC, metaclass = NonOverridableMeta):
     
 
     def __getitem__(self, index):
-        return self.df.iloc[index]
+        return self.df.loc[index]
     
 
     def __len__(self):
@@ -39,12 +39,6 @@ class MusicCaps(Dataset):
         self.text_only = text_only
         if not self.text_only:
             self._drop_unavailables()
-
-
-    # def __getitem__(self, index):
-    #     assert index < len(self)
-    #     new_index = self._index_list[index]
-    #     return self.df.iloc[new_index]
 
 
     def get_identifier(self, index):
@@ -70,6 +64,7 @@ class MusicCaps(Dataset):
         for i in index_list:
             self.df.drop(i, inplace = True)
 
+        self.df.index = range(len(self))
 
 
 class SongDescriber(Dataset):

@@ -2,6 +2,7 @@
 import torch
 import numpy as np
 from tqdm import tqdm
+import logging
 
 from mtr.utils.audio_utils import load_audio, STR_CH_FIRST
 
@@ -45,7 +46,7 @@ def pre_extract_audio_embedding(id_list, audio_path_list, model) -> dict:
     audio_embs_dict = {}
     assert len(id_list) == len(audio_path_list), f'{len(id_list)} != {len(audio_path_list)}'
 
-    print(f'Extracting audio embeddings for {len(id_list)} audio files')
+    logging.info(f'Extracting audio embeddings for {len(id_list)} audio files')
     for id, audio_path in tqdm(list(zip(id_list, audio_path_list))):
         audio_embs = audio_infer(audio_path, model)
         audio_embs_dict[id] = audio_embs

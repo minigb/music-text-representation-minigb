@@ -41,7 +41,7 @@ def get_text_all(tag_path, dataset) -> list:
 
     with open(tag_path, 'r') as f:
         tag_list = json.load(f)
-    text_list = [tag_list[i] + [dataset[i]['caption']] for i in list(dataset.df.index)]
+    text_list = [tag_list[i] + [dataset[i]['caption']] for i in range(len(dataset))]
     
     assert len(dataset) == len(text_list), f'{len(dataset)} != {len(text_list)}'
     
@@ -49,29 +49,26 @@ def get_text_all(tag_path, dataset) -> list:
 
 
 def get_text_embed_dict(text_embs_path, model, tokenizer, dataset) -> dict:
+    text_all = list(set([text for texts in dataset.df['text'] for text in texts]))
     if not text_embs_path.exists():
         os.makedirs(text_embs_path.parent, exist_ok=True)
-        text_embs_dict = pre_extract_text_embedding(
-            set([text for texts in dataset.df['text'] for text in texts ]),
-            model,
-            tokenizer)
+        text_embs_dict = pre_extract_text_embedding(text_all, model, tokenizer)
         torch.save(text_embs_dict, text_embs_path)
     else:
         text_embs_dict = torch.load(text_embs_path)
     
-    assert len(text_embs_dict) == len(set([text for texts in dataset.df['text'] for text in texts ])),\
-        f'{len(text_embs_dict)} != {len(set([text for texts in dataset.df["text"] for text in texts ]))}'
+    assert len(text_embs_dict) == len(text_all), f'{len(text_embs_dict)} != {len(text_all)}'
 
     return text_embs_dict
 
 
-def sim_calculate_and_save(sim_dir, dataset, audio_embs_dict, text_embs_dict, model, tokenizer) -> None:
+def calculate_sim_and_save(sim_dir, dataset, audio_embs_dict, text_embs_dict) -> None:
     if sim_dir.exists():
         assert len(os.listdir(sim_dir)) == len(dataset), f'{len(os.listdir(sim_dir))} != {len(dataset)}'
         return
     
     os.makedirs(sim_dir, exist_ok=True)
-    for i, cur_texts in tqdm(enumerate(dataset.df['text'])): # cur_texts is a list of string texts
+    for i, cur_texts in tqdm(list(enumerate(dataset.df['text']))): # cur_texts is a list of string texts
         query_list = cur_texts + [dataset[i]['caption']]
         sim_result = {}
 
@@ -90,11 +87,11 @@ def sim_calculate_and_save(sim_dir, dataset, audio_embs_dict, text_embs_dict, mo
     return
 
 
-def rank_calculate_and_save(rank_dir, dataset, audio_embs_dict, sim_dir, portion_list) -> None:
+def calculate_rank_and_save(rank_dir, dataset, audio_embs_dict, sim_dir, portion_list) -> None:
     for portion in portion_list:
         rank_dict = {}
         if portion == 'random':
-            # this will be set randomly in recall_at_k_calculate_and_save
+            # this will be set randomly in calculate_recall_at_k_and_save
             continue
         else:
             rank_result_path = Path(rank_dir/f'{portion}.json')
@@ -126,7 +123,7 @@ def rank_calculate_and_save(rank_dir, dataset, audio_embs_dict, sim_dir, portion
             assert len(dataset) == len(rank_dict), f'{len(dataset)} != {len(rank_dict)}'
 
 
-def recall_at_k_calculate_and_save(rank_dir, dataset, k_list, portion_list, save_dir) -> None:
+def calculate_recall_at_k_and_save(rank_dir, dataset, k_list, portion_list, save_dir) -> None:
     os.makedirs(save_dir, exist_ok=True)
     for portion in portion_list:
         rank_dict = {}
@@ -151,8 +148,8 @@ def recall_at_k_calculate_and_save(rank_dir, dataset, k_list, portion_list, save
             save_path = Path(save_dir/f'{portion}.json')
             os.makedirs(save_dir, exist_ok=True)
             recall_at_k_result[k] = {'retrieved' : count_retrieved,
-                                     'total' : len(dataset),
                                      'recall' : count_retrieved / len(dataset)}
+            recall_at_k_result['total'] = len(dataset)
             recall_at_k_result['mean_rank'] = np.mean(list(rank_dict.values())) + 1
     
             with open(save_path, 'w') as f:

@@ -1,6 +1,6 @@
 framework: contrastive
 text_type: bert
-text_rep: caption
+text_rep: stochastic
 
 dataset:
   dir: ../tag_to_music/dataset

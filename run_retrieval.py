@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     # calculate sim
     audio_embs_dict = get_audio_embed_dict(dirs['embeds'] / 'audio_embs.pt', audio_dir, model, dataset)
-    dataset.df['tag'] = get_tag_list(tag_path, dataset)
+    dataset.df['text'] = get_text_all(tag_path, dataset)
     text_embs_dict = get_text_embed_dict(dirs['embeds'] / f'text_embs_{tag_type}.pt', model, tokenizer, dataset)
     sim_calculate_and_save(dirs['sim'], dataset, audio_embs_dict, text_embs_dict, model, tokenizer)
 

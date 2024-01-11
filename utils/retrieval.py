@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 from pathlib import Path
 
-from utils.embeddings import text_infer, pre_extract_audio_embedding, pre_extract_text_embedding
+from utils.embeddings import pre_extract_audio_embedding, pre_extract_text_embedding
 from utils.dataset import MusicCaps, SongDescriber
 
 
@@ -36,31 +36,31 @@ def get_audio_embed_dict(audio_embs_path, audio_dir, model, dataset) -> dict:
     return audio_embs_dict
 
 
-def get_tag_list(tag_path, dataset) -> list:
+def get_text_all(tag_path, dataset) -> list:
     assert tag_path.exists(), f'{tag_path} does not exist'
 
     with open(tag_path, 'r') as f:
         tag_list = json.load(f)
-    tag_list = [tag_list[i] for i in list(dataset.df.index)]
+    text_list = [tag_list[i] + [dataset[i]['caption']] for i in list(dataset.df.index)]
     
-    assert len(dataset) == len(tag_list), f'{len(dataset)} != {len(tag_list)}'
+    assert len(dataset) == len(text_list), f'{len(dataset)} != {len(text_list)}'
     
-    return tag_list
+    return text_list
 
 
 def get_text_embed_dict(text_embs_path, model, tokenizer, dataset) -> dict:
     if not text_embs_path.exists():
         os.makedirs(text_embs_path.parent, exist_ok=True)
         text_embs_dict = pre_extract_text_embedding(
-            set([tag for tags in dataset.df['tag'] for tag in tags ]),
+            set([text for texts in dataset.df['text'] for text in texts ]),
             model,
             tokenizer)
         torch.save(text_embs_dict, text_embs_path)
     else:
         text_embs_dict = torch.load(text_embs_path)
     
-    assert len(text_embs_dict) == len(set([tag for tags in dataset.df['tag'] for tag in tags ])),\
-        f'{len(text_embs_dict)} != {len(set([tag for tags in dataset.df["tag"] for tag in tags ]))}'
+    assert len(text_embs_dict) == len(set([text for texts in dataset.df['text'] for text in texts ])),\
+        f'{len(text_embs_dict)} != {len(set([text for texts in dataset.df["text"] for text in texts ]))}'
 
     return text_embs_dict
 
@@ -71,21 +71,18 @@ def sim_calculate_and_save(sim_dir, dataset, audio_embs_dict, text_embs_dict, mo
         return
     
     os.makedirs(sim_dir, exist_ok=True)
-    for i, cur_tags in tqdm(enumerate(dataset.df['tag'])): # cur_tags is a list of string tags
-        query_list = cur_tags + [dataset[i]['caption']]
+    for i, cur_texts in tqdm(enumerate(dataset.df['text'])): # cur_texts is a list of string texts
+        query_list = cur_texts + [dataset[i]['caption']]
         sim_result = {}
 
         identifier = dataset.get_identifier(i)
         result_save_path = sim_dir / f'{identifier}.pt'
         
         for query in query_list:
-            if query in text_embs_dict.keys():
-                text_emb = text_embs_dict[query]
-            else:
-                text_emb = text_infer(query, model, tokenizer)
+            assert query in text_embs_dict.keys(), f'{query} not in text_embs_dict'
+            text_emb = text_embs_dict[query]
 
             sim = get_sim(audio_embs_dict, text_emb)
-
             sim_result[query] = sim
         
         torch.save(sim_result, result_save_path)

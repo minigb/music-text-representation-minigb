@@ -42,7 +42,7 @@ def get_audio_embed_dict(audio_embs_path, dataset) -> dict:
 
 
 def get_tag_list(tag_path, dataset) -> list:
-    assert tag_path.exists()
+    assert tag_path.exists(), f'{tag_path} does not exist'
 
     with open(tag_path, 'r') as f:
         tag_list = json.load(f)
@@ -70,7 +70,7 @@ def get_text_embed_dict(text_embs_path, dataset) -> dict:
     return text_embs_dict
 
 
-def calculate_and_save_sim(sim_dir, dataset, audio_embs_dict, text_embs_dict) -> None:
+def sim_calculate_and_save(sim_dir, dataset, audio_embs_dict, text_embs_dict) -> None:
     if sim_dir.exists():
         assert len(os.listdir(sim_dir)) == len(dataset), f'{len(os.listdir(sim_dir))} != {len(dataset)}'
         return
@@ -98,16 +98,16 @@ def calculate_and_save_sim(sim_dir, dataset, audio_embs_dict, text_embs_dict) ->
     return
 
 
-def calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, portion_list):
+def rank_calculate_and_save(rank_dir, dataset, audio_embs_dict, sim_dir, portion_list) -> None:
     for portion in portion_list:
         rank_dict = {}
         if portion == 'random':
-            # this will be set randomly in calculate_recall_at_k
+            # this will be set randomly in recall_at_k_calculate_and_save
             continue
         else:
-            recall_result_path = Path(result_dir/f'{portion}.json')
-            if not recall_result_path.exists():
-                os.makedirs(recall_result_path.parent, exist_ok=True)
+            rank_result_path = Path(rank_dir/f'{portion}.json')
+            if not rank_result_path.exists():
+                os.makedirs(rank_result_path.parent, exist_ok=True)
                 for i in tqdm(range(len(dataset))):
                     identifier = dataset.get_identifier(i)
                     sim_result_path = sim_dir / f'{identifier}.pt'
@@ -125,16 +125,17 @@ def calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, porti
                     rank = ret_item.index.get_loc(identifier)
                     rank_dict[str(identifier)] = rank
                 
-                with open(recall_result_path, 'w') as f:
+                with open(rank_result_path, 'w') as f:
                     json.dump(rank_dict, f, indent = 4)
 
-            assert recall_result_path.exists()
-            with open(recall_result_path, 'r') as f:
+            assert rank_result_path.exists()
+            with open(rank_result_path, 'r') as f:
                 rank_dict = json.load(f)
             assert len(dataset) == len(rank_dict), f'{len(dataset)} != {len(rank_dict)}'
 
 
-def calculate_recall_at_k(result_dir, dataset, k_list, portion_list):
+def recall_at_k_calculate_and_save(rank_dir, dataset, k_list, portion_list, save_dir) -> None:
+    os.makedirs(save_dir, exist_ok=True)
     for portion in portion_list:
         rank_dict = {}
         if portion == 'random':
@@ -142,22 +143,28 @@ def calculate_recall_at_k(result_dir, dataset, k_list, portion_list):
                 identifier = dataset.get_identifier(i)
                 rank_dict[str(identifier)] = np.random.randint(0, len(dataset) - 1)
         else:
-            recall_result_path = Path(result_dir/f'{portion}.json')
-            assert recall_result_path.exists()
-            with open(recall_result_path, 'r') as f:
+            rank_result_path = Path(rank_dir/f'{portion}.json')
+            assert rank_result_path.exists()
+            with open(rank_result_path, 'r') as f:
                 rank_dict = json.load(f)
         assert len(dataset) == len(rank_dict), f'{len(dataset)} != {len(rank_dict)}'
 
+        recall_at_k_result = {k: {} for k in k_list}
         for k in k_list:
-            recall = 0
+            count_retrieved = 0
             for identifier in rank_dict.keys():    
                 if rank_dict[identifier] < k:
-                    recall += 1
-        #TODO(minigb): Save the result instead of printing
-        print(f'portion: {portion}')
-        print(recall)
-        print(f'recall@{k}: {recall/len(dataset)*100:.2f}')
-        print('-' * 50)
+                    count_retrieved += 1
+            
+            save_path = Path(save_dir/f'{portion}.json')
+            os.makedirs(save_dir, exist_ok=True)
+            recall_at_k_result[k] = {'retrieved' : count_retrieved,
+                                     'total' : len(dataset),
+                                     'recall' : count_retrieved / len(dataset),
+                                     'mean_rank' : np.mean(list(rank_dict.values())) + 1}
+    
+            with open(save_path, 'w') as f:
+                json.dump(recall_at_k_result, f, indent = 4)
 
 
 if __name__ == "__main__":
@@ -191,21 +198,23 @@ if __name__ == "__main__":
         raise NotImplementedError
     
     # path
-    tag_path = Path(dataset_config.tags_dir)/tag_type/dataset_name/f'tags.json'
+    # TODO(minigb): Make a function to set the paths
+    tag_path = Path(dataset_config.tags_dir)/tag_type/f'{dataset_name}_tags.json'
     audio_embs_path = Path(dir_by_config/'preprocessing'/dataset_name/'audio_embs.pt')
     text_embs_path = Path(dir_by_config/'preprocessing'/dataset_name/f'text_embs_{tag_type}.pt')
     sim_dir = Path(dir_by_config/'sim_result'/dataset_name/tag_type)
+    rank_dir = Path('rank'/dir_by_config/dataset_name/tag_type)
     result_dir = Path('result'/dir_by_config/dataset_name/tag_type)
 
     # do retrieval
     audio_embs_dict = get_audio_embed_dict(audio_embs_path, dataset)
     dataset.df['tag'] = get_tag_list(tag_path, dataset)
     text_embs_dict = get_text_embed_dict(text_embs_path, dataset)
-    calculate_and_save_sim(sim_dir, dataset, audio_embs_dict, text_embs_dict)
+    sim_calculate_and_save(sim_dir, dataset, audio_embs_dict, text_embs_dict)
 
     # recall at k
     portion_list = [-1, 0, 0.3, 0.5, 0.7, 'random'] # -1: just average, 0: caption only
-    calculate_and_save_rank(result_dir, dataset, audio_embs_dict, sim_dir, dir_by_config, dataset_name, portion_list, k_list=[10])
+    rank_calculate_and_save(rank_dir, dataset, audio_embs_dict, sim_dir, portion_list)
 
-    k_list = [10]
-    calculate_recall_at_k(result_dir, dataset, k_list, portion_list)
+    k_list = [1, 5, 10]
+    recall_at_k_calculate_and_save(rank_dir, dataset, k_list, portion_list, result_dir)

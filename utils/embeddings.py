@@ -20,10 +20,11 @@ def audio_infer(audio_path, model, duration=9.91, sr=16000):
     audio = np.stack([np.array(audio[i * input_size : (i + 1) * input_size]) for i in range(hop)]).astype('float32')
     audio_tensor = torch.from_numpy(audio)
 
+    if torch.cuda.is_available():
+        audio_tensor = audio_tensor.to('cuda')
+        model = model.to('cuda')
+
     with torch.no_grad():
-        if torch.cuda.is_available():
-            audio_tensor = audio_tensor.to('cuda')
-            model = model.to('cuda')
         z_audio = model.encode_audio(audio_tensor)
     audio_embs = z_audio.mean(0).detach().cpu()
 
@@ -33,10 +34,11 @@ def audio_infer(audio_path, model, duration=9.91, sr=16000):
 def text_infer(text, model, tokenizer):
     text_input = tokenizer(text, return_tensors="pt")['input_ids']
     attention_mask = tokenizer(text, return_tensors="pt")['attention_mask']
+    if torch.cuda.is_available():
+        model = model.to('cuda')
+        text_input = text_input.to('cuda')
+        attention_mask = attention_mask.to('cuda')
     with torch.no_grad():
-        if torch.cuda.is_available():
-            text_input = text_input.to('cuda')
-            model = model.to('cuda')
         text_embs = model.encode_bert_text(text_input, attention_mask)
     text_embs = text_embs.mean(0).detach().cpu()
 
